@@ -902,3 +902,5 @@ apt-get install mariadb-server -y
 ```sh
 mariadb --host=10.68.3.4 --port=3306 --user=kelompokit09 --password
 ```
+
+![Database](./Assets/database.png)
