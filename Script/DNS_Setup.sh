@@ -44,4 +44,18 @@ echo '$TTL    604800
 @       IN  A       10.68.2.2
 www     IN  CNAME   eldia.it09.com.' > /etc/bind/it09/eldia.it09.com
 
+echo '
+options {
+        directory "/var/cache/bind";
+
+        forwarders {
+            192.168.122.1;
+        };
+
+        allow-query{any;};
+
+        auth-nxdomain no;
+        listen-on-v6 { any; };
+};' > /etc/bind/named.conf.options
+
 service bind9 restart

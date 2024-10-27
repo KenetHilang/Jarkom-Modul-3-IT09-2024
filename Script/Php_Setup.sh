@@ -17,6 +17,7 @@ rm -rf /var/www/html/download/
 echo '
 server {
 	listen 80;
+	server_name eldia.it09.com;
 
 	root /var/www/eldia.it09.com;
 

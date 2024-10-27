@@ -11,7 +11,6 @@
 
 ![Topologi](image.png)
 
-
 ## Network Config
 
 ### Paradis (Router)
@@ -62,27 +61,27 @@ iface eth0 inet static
 ```sh
 auto eth0
 iface eth0 inet static
-	address 10.68.2.2
+	address 10.68.3.2
 	netmask 255.255.255.0
-	gateway 10.68.2.1
+	gateway 10.68.3.1
 ```
 
 ### Colossal (Load Balancer - PHP)
 ```sh
 auto eth0
 iface eth0 inet static
-	address 10.68.2.3
+	address 10.68.3.3
 	netmask 255.255.255.0
-	gateway 10.68.2.1
+	gateway 10.68.3.1
 ```
 
 ### Warhammer (Database Server)
 ```sh
 auto eth0
 iface eth0 inet static
-	address 10.68.2.4
+	address 10.68.3.4
 	netmask 255.255.255.0
-	gateway 10.68.2.1
+	gateway 10.68.3.1
 ```
 
 ### Annie (Laravel Worker)
@@ -217,7 +216,24 @@ $TTL    604800
 www     IN  CNAME   eldia.it09.com.
 ```
 
-f. Merestart service dari bind9
+f. Masukkan ini ke dalam file `/etc/bind/named.conf.options` agar client bisa mengakses internet
+
+```sh
+options {
+        directory "/var/cache/bind";
+
+        forwarders {
+            192.168.122.1;
+        };
+
+        allow-query{any;};
+
+        auth-nxdomain no;
+        listen-on-v6 { any; };
+};
+```
+
+g. Merestart service dari bind9
 
 ```sh
 service bind9 restart
@@ -232,26 +248,26 @@ Lakukan konfigurasi sesuai dengan peta yang sudah diberikan. Semua Client harus 
 
 a. Instalasi dependencies yang diperlukan
 
-```
+```sh
 apt-get update
 apt-get install isc-dhcp-server -y
 ```
 
 b. Menjalankan service dari isc-dhcp-server
 
-```
+```sh
 service isc-dhcp-server start
 ```
 
 c. Menambahkan line berikut pada file `/etc/default/isc-dhcp-server`
 
-```
+```sh
 INTERFACES="eth0"
 ```
 
 d. Menambahkan line berikut pada file `/etc/dhcp/dhcpd.conf`
 
-```
+```sh
 subnet 10.68.1.0 netmask 255.255.255.0 {
 	option routers 10.68.1.1;
 	option broadcast-address 10.68.1.255;
@@ -271,7 +287,7 @@ subnet 10.68.4.0 netmask 255.255.255.0 {}
 
 e. Merestart service dari isc-dhcp-server
 
-```
+```sh
 service isc-dhcp-server restart
 ```
 
@@ -279,20 +295,20 @@ service isc-dhcp-server restart
 
 a. Instalasi dependencies yang diperlukan
 
-```
+```sh
 apt-get update
 apt-get install isc-dhcp-relay -y
 ```
 
 b. Menjalankan service dari isc-dhcp-relay
 
-```
+```sh
 service isc-dhcp-relay start
 ```
 
 c. Menambahkan line berikut pada file `/etc/default/isc-dhcp-relay`
 
-```
+```sh
 SERVERS="10.68.4.3"
 INTERFACES="eth1 eth2 eth3 eth4"
 OPTIONS=""
@@ -300,28 +316,45 @@ OPTIONS=""
 
 d. Menambahkan line berikut pada file `/etc/sysctl.conf`
 
-```
+```sh
 net.ipv4.ip_forward=1
 ```
 
 e. Merestart service dari isc-dhcp-relay
 
-```
+```sh
 service isc-dhcp-relay restart
 ```
 
 f. Menampilkan status dari isc-dhcp-relay
 
-```
+```sh
 service isc-dhcp-relay status
 ```
 
-
-## Soal Nomer 2
+## Soal Nomer 2 & 3
 Client yang melalui bangsa marley mendapatkan range IP dari [prefix IP].1.05 - [prefix IP].1.25 dan [prefix IP].1.50 - [prefix IP].1.100 (2)
-
-## Soal Nomer 3
 Client yang melalui bangsa eldia mendapatkan range IP dari [prefix IP].2.09 - [prefix IP].2.27 dan [prefix IP].2 .81 - [prefix IP].2.243 (3)
+
+a. Menambahkan line range berikut pada file `/etc/dhcp/dhcpd.conf`
+
+```sh
+subnet 10.68.1.0 netmask 255.255.255.0 {
+    range 10.68.1.05 10.68.1.25;
+    range 10.68.1.50 10.68.1.100;
+	option routers 10.68.1.1;
+	option broadcast-address 10.68.1.255;
+	option domain-name-servers 10.68.4.2;
+}
+
+subnet 10.68.2.0 netmask 255.255.255.0 {
+    range 10.68.2.09 10.68.2.27;
+    range 10.68.2.81 10.68.2.243;
+	option routers 10.68.2.1;
+	option broadcast-address 10.68.2.255;
+	option domain-name-servers 10.68.4.2;
+}
+```
 
 ## Soal Nomer 4
 Client mendapatkan DNS dari keluarga Fritz dan dapat terhubung dengan internet melalui DNS tersebut (4)
@@ -363,7 +396,34 @@ lynx 10.68.2.4
 ## Soal Nomer 7
 Dikarenakan Armin sudah mendapatkan kekuatan titan colossal, maka bantulah kaum eldia menggunakan colossal agar dapat bekerja sama dengan baik. Kemudian lakukan testing dengan 6000 request dan 200 request/second. (7)
 
+```sh
+upstream roundrobin {
+    server 10.68.2.2;
+    server 10.68.2.3;
+    server 10.68.2.4;
+}
 
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html;
+
+    location / {
+        proxy_pass http://roundrobin;
+    }
+}
+```
+
+
+```sh
+ab  -n 6000 -c 200 http://10.68.3.3/
+```
+
+### Testing
+![Round Robin def](image-8.png)
 
 ## Soal Nomer 8
 Karena Erwin meminta “laporan kerja Armin”, maka dari itu buatlah analisis hasil testing dengan 1000 request dan 75 request/second untuk masing-masing algoritma Load Balancer dengan ketentuan sebagai berikut:
@@ -372,21 +432,113 @@ Karena Erwin meminta “laporan kerja Armin”, maka dari itu buatlah analisis h
 - Grafik request per second untuk masing masing algoritma
 - Analisis (8)
 
+```sh
+upstream roundrobin {
+    server 10.68.2.2;
+    server 10.68.2.3;
+    server 10.68.2.4;
+}
+
+upstream leastconnect {
+    least_conn;
+    server 10.68.2.2;
+    server 10.68.2.3;
+    server 10.68.2.4;
+}
+
+upstream iphash {
+    ip_hash;
+    server 10.68.2.2;
+    server 10.68.2.3;
+    server 10.68.2.4;
+}
+
+upstream genhash {
+    hash $remote_addr consistent;
+    server 10.68.2.2;
+    server 10.68.2.3;
+    server 10.68.2.4;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html;
+
+    location /roundrobin {
+        proxy_pass http://roundrobin;
+    }
+
+	location /leastconnect {
+        proxy_pass http://leastconn3;
+    }
+
+    location /iphash {
+        proxy_pass http://iphash;
+    }
+
+    location /genhash {
+        proxy_pass http://genhash;
+    }
+}
+```
+## Testing
+
+![round robin](image-9.png)
+
+![Least Connect](image-10.png)
+
+![Ip hash](image-11.png)
+
+![gen hash](image-12.png)
 
 ## Soal Nomer 9
 Dengan menggunakan algoritma Least-Connection, lakukan testing dengan menggunakan 3 worker, 2 worker, dan 1 worker sebanyak 1000 request dengan 10 request/second, kemudian tambahkan grafiknya pada “laporan kerja Armin”. (9)
+
+![3 Worker](image-13.png)
+
+![2 Worker](image-14.png)
+
+![1 Worker](image-15.png)
+
 
 
 ## Soal Nomer 10
 Selanjutnya coba tambahkan keamanan dengan konfigurasi autentikasi di Colossal dengan dengan kombinasi username: “arminannie” dan password: “jrkmyyy”, dengan yyy merupakan kode kelompok. Terakhir simpan file “htpasswd” nya di /etc/nginx/supersecret/ (10)
 
+![Cannot access](image-16.png)
+![Access](image-17.png)
+![Access dalem](image-18.png)
+
 ## Soal Nomer 11
 Lalu buat untuk setiap request yang mengandung /titan akan di proxy passing menuju halaman https://attackontitan.fandom.com/wiki/Attack_on_Titan_Wiki (11) 
 hint: (proxy_pass)
 
+![Berhasil access](image-19.png)
+
 ## Soal Nomer 12
 Selanjutnya Colossal ini hanya boleh diakses oleh client dengan IP [Prefix IP].1.77, [Prefix IP].1.88, [Prefix IP].2.144, dan [Prefix IP].2.156. (12) 
 hint: (fixed in dulu clientnya)
+
+![awal](image-21.png)
+![hasil](image-20.png)
+
+```sh
+    location / {
+        allow 10.68.1.77;
+		allow 10.68.1.88;
+		allow 10.68.2.144;
+		allow 10.68.2.156;
+		allow 10.68.2.11;
+        deny all;
+        proxy_pass http://roundrobin;
+    }
+```
+
+![Berhasil](image-22.png)
 
 ## Soal Nomer 13
 Karena mengetahui bahwa ada keturunan marley yang mewarisi kekuatan titan, Zeke pun berinisiatif untuk menyimpan data data penting di Warhammer, dan semua data tersebut harus dapat diakses oleh anak buah kesayangannya, Annie, Reiner, dan Berthold.  (13)
