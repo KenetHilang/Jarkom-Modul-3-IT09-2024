@@ -9,7 +9,7 @@
 
 ## Topologi
 
-![Topologi](image.png)
+![Topologi](./Assets/image.png)
 
 ## Network Config
 
@@ -332,9 +332,11 @@ f. Menampilkan status dari isc-dhcp-relay
 service isc-dhcp-relay status
 ```
 
-## Soal Nomer 2 & 3
+## Soal Nomer 2 - 4
 Client yang melalui bangsa marley mendapatkan range IP dari [prefix IP].1.05 - [prefix IP].1.25 dan [prefix IP].1.50 - [prefix IP].1.100 (2)
 Client yang melalui bangsa eldia mendapatkan range IP dari [prefix IP].2.09 - [prefix IP].2.27 dan [prefix IP].2 .81 - [prefix IP].2.243 (3)
+Client mendapatkan DNS dari keluarga Fritz dan dapat terhubung dengan internet melalui DNS tersebut (4)
+
 
 a. Menambahkan line range berikut pada file `/etc/dhcp/dhcpd.conf`
 
@@ -356,20 +358,126 @@ subnet 10.68.2.0 netmask 255.255.255.0 {
 }
 ```
 
-## Soal Nomer 4
-Client mendapatkan DNS dari keluarga Fritz dan dapat terhubung dengan internet melalui DNS tersebut (4)
+### Testing
 
-![Hasil Ping](image-1.png)
-![Hasil Ping 2](image-2.png)
+#### Ping Marley
+![Hasil Ping](./Assets/image-1.png)
+
+#### Ping Eldia
+![Hasil Ping 2](./Assets/image-2.png)
 
 ## Soal Nomer 5
 Dikarenakan keluarga Tybur tidak menyukai kaum eldia, maka mereka hanya meminjamkan ip address ke kaum eldia selama 6 menit. Namun untuk kaum marley, keluarga Tybur meminjamkan ip address selama 30 menit. Waktu maksimal dialokasikan untuk peminjaman alamat IP selama 87 menit. (5)
 
-![Hasil Erwin](image-3.png)
-![Hasil Zeke](image-4.png)
+a. Menambahkan line range berikut pada file `/etc/dhcp/dhcpd.conf`
+
+```sh
+subnet 10.68.1.0 netmask 255.255.255.0 {
+    range 10.68.1.05 10.68.1.25;
+    range 10.68.1.50 10.68.1.100;
+	option routers 10.68.1.1;
+	option broadcast-address 10.68.1.255;
+	option domain-name-servers 10.68.4.2;
+    default-lease-time 1800;
+    max-lease-time 5220;
+}
+
+subnet 10.68.2.0 netmask 255.255.255.0 {
+    range 10.68.2.09 10.68.2.27;
+    range 10.68.2.81 10.68.2.243;
+	option routers 10.68.2.1;
+	option broadcast-address 10.68.2.255;
+	option domain-name-servers 10.68.4.2;
+    default-lease-time 360;
+    max-lease-time 5220;
+}
+```
+
+### Testing
+
+#### Erwin
+![Hasil Erwin](./Assets/image-3.png)
+#### Zeke
+![Hasil Zeke](./Assets/image-4.png)
 
 ## Soal Nomer 6
 Armin berinisiasi untuk memerintahkan setiap worker PHP untuk melakukan konfigurasi virtual host untuk website berikut https://intip.in/BangsaEldia dengan menggunakan php 7.3 (6)
+
+### Setup PHP Worker (Armin, Eren, & Mikasa)
+
+a. Instalasi dependencies yang diperlukan
+
+```sh
+apt-get update
+apt-get install lynx nginx wget unzip php7.3 php-fpm -y
+```
+
+b. Menjalankan service dari php-fpm dan nginx
+
+```sh
+service php7.3-fpm start
+service nginx start
+```
+
+c. Untuh file `eldia.zip` dan letakkan isinya pada directory `/var/www/html/`
+
+```sh
+mkdir -p /var/www/html/download/
+
+wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1TvebIeMQjRjFURKVtA32lO9aL7U2msd6' -O /var/www/html/download/eldia.zip
+
+unzip /var/www/html/download/eldia.zip -d /var/www/eldia.it09.com
+
+rm -rf /var/www/html/download/
+```
+
+d. Menambahkan line berikut pada file `/etc/nginx/sites-available/eldia.it09.com`
+
+```sh
+server {
+	listen 80;
+	server_name eldia.it09.com;
+
+	root /var/www/eldia.it09.com;
+
+	index index.php index.html index.htm;
+
+	server_name _;
+
+	location / {
+		try_files \$uri \$uri/ /index.php?\$query_string;
+	}
+
+	location ~ \.php$ {
+		include snippets/fastcgi-php.conf;
+		fastcgi_pass unix:/var/run/php/php7.3-fpm.sock;
+	}
+
+	error_log /var/log/nginx/jarkom-it09_error.log;
+	access_log /var/log/nginx/jarkom-it09_access.log;
+}
+```
+
+e. f. Buat symlink `eldia.it09.com` pada `/etc/nginx/sites-available/` di `/etc/nginx/sites-enabled`
+
+```sh
+ln -s /etc/nginx/sites-available/eldia.it09.com /etc/nginx/sites-enabled
+```
+
+f. Hapus `default` pada `/etc/nginx/sites-enabled/`
+
+```sh
+rm /etc/nginx/sites-enabled/default
+```
+
+g. Restart service nginx dan php-fpm
+
+```sh
+service php7.3-fpm start
+service php7.3-fpm restart
+service nginx restart
+nginx -t
+```
 
 ### Testing
 
@@ -378,23 +486,47 @@ Armin berinisiasi untuk memerintahkan setiap worker PHP untuk melakukan konfigur
 lynx 10.68.2.2
 ```
 
-![Armin](image-5.png)
+![Armin](./Assets/image-5.png)
 
 #### Eren
 ```sh
 lynx 10.68.2.3
 ```
 
-![Eren](image-6.png)
+![Eren](./Assets/image-6.png)
 
 #### Mikasa
 ```sh
 lynx 10.68.2.4
 ```
-![Mikasa](image-7.png)
+![Mikasa](./Assets/image-7.png)
 
 ## Soal Nomer 7
 Dikarenakan Armin sudah mendapatkan kekuatan titan colossal, maka bantulah kaum eldia menggunakan colossal agar dapat bekerja sama dengan baik. Kemudian lakukan testing dengan 6000 request dan 200 request/second. (7)
+
+### Setup Load Balancer (Colossal)
+
+a. Instalasi dependencies yang diperlukan
+
+```sh
+apt-get update
+apt-get install lynx nginx php7.3 php-fpm apache2-utils -y
+```
+
+b. Menjalankan service dari php-fpm dan nginx
+
+```sh
+service php7.3-fpm start
+service nginx start
+```
+
+c. Bersihkan isi dari folder `/etc/nginx/sites-available`
+
+```sh
+rm -rf /etc/nginx/sites-available/*
+```
+
+d. Menambahkan line berikut pada file `/etc/nginx/sites-available/load-balancer-it09`
 
 ```sh
 upstream roundrobin {
@@ -417,13 +549,26 @@ server {
 }
 ```
 
+e. Buat symlink `load-balancer-it09` pada `/etc/nginx/sites-available/` di `/etc/nginx/sites-enabled`
+
+```sh
+ln -s /etc/nginx/sites-available/load-balancer-it09 /etc/nginx/sites-enabled
+```
+
+f. Restart service nginx dan php-fpm
+
+```sh
+service nginx restart
+service php7.3-fpm restart
+```
+
+### Testing
 
 ```sh
 ab  -n 6000 -c 200 http://10.68.3.3/
 ```
 
-### Testing
-![Round Robin def](image-8.png)
+![Round Robin def](./Assets/image-8.png)
 
 ## Soal Nomer 8
 Karena Erwin meminta “laporan kerja Armin”, maka dari itu buatlah analisis hasil testing dengan 1000 request dan 75 request/second untuk masing-masing algoritma Load Balancer dengan ketentuan sebagai berikut:
@@ -431,6 +576,14 @@ Karena Erwin meminta “laporan kerja Armin”, maka dari itu buatlah analisis h
 - Report hasil testing pada Apache Benchmark
 - Grafik request per second untuk masing masing algoritma
 - Analisis (8)
+
+a. Gunakan Script dibawah untuk menjalankan load balancer
+
+```sh
+ab  -n 1000 -c 75 http://10.68.3.3/<endpoint>
+```
+
+b. Untuk mengganti menjadi algoritma lain, tambahkan endpoint pada akhir script di atas
 
 ```sh
 upstream roundrobin {
@@ -487,44 +640,189 @@ server {
 ```
 ## Testing
 
-![round robin](image-9.png)
+### Round Robin
+![round robin](./Assets/image-9.png)
 
-![Least Connect](image-10.png)
+### Least Connection
+![Least Connect](./Assets/image-10.png)
 
-![Ip hash](image-11.png)
+### Ip hash
+![Ip hash](./Assets/image-11.png)
 
-![gen hash](image-12.png)
+### Gen Hash
+![gen hash](./Assets/image-12.png)
+
+### Grafik
 
 ## Soal Nomer 9
 Dengan menggunakan algoritma Least-Connection, lakukan testing dengan menggunakan 3 worker, 2 worker, dan 1 worker sebanyak 1000 request dengan 10 request/second, kemudian tambahkan grafiknya pada “laporan kerja Armin”. (9)
 
-![3 Worker](image-13.png)
+a. Gunakan Script dibawah untuk menjalankan load balancer
 
-![2 Worker](image-14.png)
+```sh
+ab  -n 1000 -c 10 http://10.68.3.3/
+```
 
-![1 Worker](image-15.png)
+b. Ubah script pada file `/etc/nginx/sites-available/load-balancer-it09`, lalu hapus server nya dari 3 worker menjadi 2 worker lalu terakhir 1 worker
 
+```sh
+upstream leastconnect {
+    least_conn;
+    server 10.68.2.2;
+    server 10.68.2.3;
+    server 10.68.2.4;
+}
 
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html;
+
+    location / {
+        proxy_pass http://leastconnect;
+    }
+}
+```
+
+## Testing
+
+### Hasil 3 Worker
+
+![3 Worker](./Assets/image-13.png)
+
+### Hasil 2 Worker
+
+![2 Worker](./Assets/image-14.png)
+
+### Hasil 1 Worker
+
+![1 Worker](./Assets/image-15.png)
 
 ## Soal Nomer 10
 Selanjutnya coba tambahkan keamanan dengan konfigurasi autentikasi di Colossal dengan dengan kombinasi username: “arminannie” dan password: “jrkmyyy”, dengan yyy merupakan kode kelompok. Terakhir simpan file “htpasswd” nya di /etc/nginx/supersecret/ (10)
 
-![Cannot access](image-16.png)
-![Access](image-17.png)
-![Access dalem](image-18.png)
+### Setup Load Balancer (Colossal)
+
+a. Instalasi dependencies yang diperlukan
+
+```sh
+apt-get update
+apt-get install apache2-utils -y
+```
+
+b. Membuat folder supersecret
+
+```sh
+mkdir -p /etc/nginx/supersecret
+```
+
+c. Buat file `htpasswd` dengan username dan password yang telah ditentukan
+
+```sh
+htpasswd -cb /etc/nginx/supersecret/htpasswd arminannie jrkmit09
+```
+
+d. Menjalankan service dari php-fpm dan nginx
+
+```sh
+service php7.3-fpm start
+service nginx start
+```
+
+e. Edit konfigurasi `server` pada file `/etc/nginx/sites-available/load-balancer-it09.conf` menjadi seperti berikut
+
+```sh
+server {
+	listen 80;
+
+	root /var/www/html;
+
+	index index.html index.htm index.nginx-debian.html;
+
+	server_name _;
+
+	location / {
+		auth_basic "Restricted Content";
+        auth_basic_user_file /etc/nginx/supersecret/htpasswd;
+        proxy_pass http://leastconnect;
+	}
+}
+```
+
+## Testing
+
+![Cannot access](./Assets/image-16.png)
+
+![Access](./Assets/image-17.png)
+
+![Access dalem](./Assets/image-18.png)
 
 ## Soal Nomer 11
 Lalu buat untuk setiap request yang mengandung /titan akan di proxy passing menuju halaman https://attackontitan.fandom.com/wiki/Attack_on_Titan_Wiki (11) 
 hint: (proxy_pass)
 
-![Berhasil access](image-19.png)
+### Setup Load Balancer (Colossal)
+
+a. Edit konfigurasi `server` pada file `/etc/nginx/sites-available/load-balancer-it09.conf` lalu tambahkan line berikut
+
+```sh
+    location /titan {
+		proxy_pass https://attackontitan.fandom.com/wiki/Attack_on_Titan_Wiki/;
+    }
+```
+
+b. Restart service nginx dan php-fpm
+
+```sh
+service nginx restart
+service php7.3-fpm restart
+```
+
+## Testing
+
+```sh
+lynx 10.68.3.3/titan
+```
+
+![Berhasil access](./Assets/image-19.png)
 
 ## Soal Nomer 12
 Selanjutnya Colossal ini hanya boleh diakses oleh client dengan IP [Prefix IP].1.77, [Prefix IP].1.88, [Prefix IP].2.144, dan [Prefix IP].2.156. (12) 
 hint: (fixed in dulu clientnya)
 
-![awal](image-21.png)
-![hasil](image-20.png)
+a. Edit konfigurasi `server` pada file `/etc/nginx/sites-available/load-balancer-it09.conf` tambahkan line berikut
+
+```sh
+    location / {
+        allow 10.68.1.77;
+		allow 10.68.1.88;
+		allow 10.68.2.144;
+		allow 10.68.2.156;
+        deny all;
+        proxy_pass http://leastconnect;
+    }
+```
+
+b. Restart service nginx dan php-fpm
+
+```sh
+service nginx restart
+service php7.3-fpm restart
+```
+
+## Testing
+
+```sh
+lynx 10.68.3.3
+```
+
+![awal](./Assets/image-21.png)
+
+### Hasil 
+![hasil](./Assets/image-20.png)
 
 ```sh
     location / {
@@ -538,7 +836,69 @@ hint: (fixed in dulu clientnya)
     }
 ```
 
-![Berhasil](image-22.png)
+![Berhasil](./Assets/image-22.png)
 
 ## Soal Nomer 13
-Karena mengetahui bahwa ada keturunan marley yang mewarisi kekuatan titan, Zeke pun berinisiatif untuk menyimpan data data penting di Warhammer, dan semua data tersebut harus dapat diakses oleh anak buah kesayangannya, Annie, Reiner, dan Berthold.  (13)
+Karena mengetahui bahwa ada keturunan marley yang mewarisi kekuatan titan, Zeke pun berinisiatif untuk menyimpan data data penting di Warhammer, dan semua data tersebut harus dapat diakses oleh anak buah kesayangannya, Annie, Reiner, dan Berthold. (13)
+
+### Setup Database Server (WarHammer)
+
+a. Instalasi dependencies yang diperlukan
+
+```sh
+apt-get update
+apt-get install mariadb-server -y
+```
+
+b. Memulai service dari mysql
+
+```sh
+service mysql start
+```
+
+c. Membuat konfigurasi `mysql` sebagai berikut
+
+```sh
+CREATE USER 'kelompokit09'@'%' IDENTIFIED BY 'passwordit09';
+CREATE USER 'kelompokit09'@'localhost' IDENTIFIED BY 'passwordit09';
+CREATE DATABASE dbkelompokit09;
+GRANT ALL PRIVILEGES ON *.* TO 'kelompokit09'@'%';
+GRANT ALL PRIVILEGES ON *.* TO 'kelompokit09'@'localhost';
+FLUSH PRIVILEGES;
+
+```
+
+d. Akses ke database mysql dengan username `kelompokit09` dan `passwordit09` lalu tampilkan semua database dengan command
+
+```sh
+SHOW DATABASES;
+```
+
+e. Tambahkan line berikut pada file `/etc/mysql/my.cnf`
+
+```sh
+[mysqld]
+skip-networking=0
+skip-bind-address
+```
+
+f. Restart service dari mysql
+
+```sh
+service mysql restart
+```
+
+### Setup Laravel Worker (Annie, Bertholdt, & Reiner)
+
+a. Instalasi dependencies yang diperlukan
+
+```sh
+apt-get update
+apt-get install mariadb-server -y
+```
+
+### Testing
+
+```sh
+mariadb --host=10.68.3.4 --port=3306 --user=kelompokit09 --password
+```
